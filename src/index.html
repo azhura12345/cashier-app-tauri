@@ -4,28 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Home - POS</title>
-  <script src="https://cdn.jsdelivr.net/npm/alpinejs@2.8.2" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js" defer></script>
   <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet" />
 </head>
-<body class="bg-gray-50 text-gray-800" x-data="initApp()">
+<body class="bg-gray-50 text-gray-800" x-data="initApp()" x-init="init()">
 
 <!-- HEADER -->
 <header class="flex items-center justify-between px-4 py-1 bg-white border-b shadow-sm">
-  <!-- Kiri: Home + Search -->
   <div class="flex items-center space-x-3">
     <button>
       <img src="assets/icons/home.svg" class="w-5 h-5 text-gray-600" alt="home icon" />
     </button>
     <div class="relative">
       <span class="absolute inset-y-0 left-2 flex items-center text-gray-400">
-        <img src="assets/icons/iconSearch.png" class="w-5 h-5 text-gray-600" alt="Search icon" />
+        <img src="assets/icons/iconSearch.png" class="w-5 h-5" alt="Search icon" />
       </span>
       <input type="text" placeholder="Search Chair, Table, Etc..."
         class="w-72 pl-8 pr-4 py-1.5 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" />
     </div>
   </div>
-
-  <!-- Kanan: Notif + Cart -->
   <div class="flex items-center space-x-4">
     <button>
       <img src="assets/icons/notification.svg" class="w-5 h-5 text-gray-600" alt="notification icon" />
@@ -36,38 +33,49 @@
   </div>
 </header>
 
+<!-- CATEGORY TITLE -->
+<section class="flex justify-between items-center px-6 mt-1 mb-1">
+  <h2 class="text-base font-semibold">Menu Category</h2>
+  <a href="all-product.html" class="text-sm font-medium text-blue-600 hover:underline">All Product</a>
+</section>
 
-  <!-- CATEGORY TITLE -->
-  <section class="flex justify-between items-center px-6 mt-1 mb-1">
-    <h2 class="text-base font-semibold">Menu Category</h2>
-    <a href="#" class="text-sm font-medium text-blue-600 hover:underline">All Product</a>
-  </section>
+<!-- CATEGORY GRID -->
+<section class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5 px-6 pb-10">
+  <template x-for="cat in categories" :key="cat.id">
+    <div class="bg-white rounded-xl overflow-hidden shadow hover:shadow-md cursor-pointer transition-all p-4">
+      <img :src="cat.image" alt="" class="w-full h-52 object-contain" />
+      <div class="text-center pt-3 text-base font-semibold" x-text="cat.name"></div>
+    </div>
+  </template>
+</section>
 
-  <!-- CATEGORY GRID -->
-  <section class="grid grid-cols-4 gap-5 px-6 pb-10">
-    <template x-for="cat in categories" :key="cat.id">
-      <div class="bg-white rounded-xl overflow-hidden shadow hover:shadow-md cursor-pointer transition-all">
-        <img :src="cat.image" alt="" class="w-full h-50 object-contain p-3" />
-        <div class="text-center py-2 text-sm font-medium" x-text="cat.name"></div>
-      </div>
-    </template>
-  </section>
-
-  <script>
-    function initApp() {
-      return {
-        categories: [
-          { id: 1, name: "Living Room", image: "assets/img/living-room.png" },
-          { id: 2, name: "Bedroom", image: "assets/img/bedroom.png" },
-          { id: 3, name: "Dinning Room", image: "assets/img/dinning-room.png" },
-          { id: 4, name: "Office", image: "assets/img/office.png" },
-          { id: 5, name: "Kitchen", image: "assets/img/kitchen.png" },
-          { id: 6, name: "Outdoor", image: "assets/img/outdoor.png" },
-          { id: 7, name: "Decoration", image: "assets/img/decoration.png" },
-          { id: 8, name: "Kids", image: "assets/img/kids.png" }
-        ]
+<!-- SCRIPT -->
+<script>
+  function initApp() {
+    return {
+      categories: [
+        { id: 1, name: "Living Room", image: "assets/img/living-room.png" },
+        { id: 2, name: "Bedroom", image: "assets/img/bedroom.png" },
+        { id: 3, name: "Dining Room", image: "assets/img/dinning-room.png" },
+        { id: 4, name: "Office", image: "assets/img/office.png" },
+        { id: 5, name: "Kitchen", image: "assets/img/kitchen.png" },
+        { id: 6, name: "Outdoor", image: "assets/img/outdoor.png" },
+        { id: 7, name: "Decoration", image: "assets/img/decoration.png" },
+        { id: 8, name: "Kids", image: "assets/img/kids.png" }
+      ],
+      products: [],
+      async init() {
+        try {
+          const res = await window.__TAURI__.core.invoke("get_products");
+          this.products = JSON.parse(res);
+          console.log("Produk dari backend:", this.products);
+        } catch (err) {
+          console.error("Gagal ambil produk:", err);
+        }
       }
     }
-  </script>
+  }
+</script>
+
 </body>
 </html>

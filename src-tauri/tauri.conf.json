@@ -10,9 +10,13 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "cashier-app",
-        "width": 800,
-        "height": 600
+        "label": "main",
+        "url": "index.html",
+        "fullscreen": false,
+        "resizable": true,
+        "title": "Cashier App",
+        "visible": true,
+        "devtools": true
       }
     ],
     "security": {
