@@ -1,0 +1,20 @@
+<!-- pages/home.html -->
+<section class="px-5 mt-3" x-data>
+  <div class="flex justify-between items-center mb-2">
+    <h2 class="text-base font-semibold">Menu Category</h2>
+    <a href="#" class="text-sm text-blue-600 hover:underline" @click="navigate('all-product')">
+      All Product →
+    </a>
+  </div>
+
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5 pb-10">
+<!-- ✅ Perbaiki bagian x-if & x-for -->
+<template x-for="cat in categories" :key="cat.id">
+  <div class="bg-white rounded-xl overflow-hidden shadow hover:shadow-md cursor-pointer transition-all p-4">
+    <img :src="cat.image" alt="" class="w-full h-52 object-contain" />
+    <div class="text-center pt-3 text-base font-semibold" x-text="cat.name"></div>
+  </div>
+</template>
+
+  </div>
+</section>

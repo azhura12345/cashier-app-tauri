@@ -1,0 +1,40 @@
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+  <template x-for="product in filteredProducts" :key="product.id">
+    <div class="rounded-2xl bg-white shadow p-4 flex flex-col gap-2 relative">
+      <div class="absolute top-2 left-2 flex gap-2">
+        <template x-if="product.discount_percentage">
+          <span class="bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded" x-text="`-${product.discount_percentage}%`"></span>
+        </template>
+        <template x-if="product.is_new">
+          <span class="bg-pink-500 text-white text-xs px-2 py-0.5 rounded">New</span>
+        </template>
+      </div>
+      <img :src="product.image" class="h-32 object-contain mx-auto" />
+      <h3 class="font-bold text-center text-base" x-text="product.name"></h3>
+      <div class="flex items-center justify-between w-full text-sm">
+        <div class="text-lg font-bold text-gray-900">
+          <span x-text="'$' + product.price"></span>
+          <template x-if="product.original_price">
+            <span class="line-through text-red-500 ml-1 text-sm" x-text="'$' + product.original_price"></span>
+          </template>
+        </div>
+        <div class="flex gap-2 text-gray-600 text-xs">
+          <span x-text="`W: ${product.width}`"></span>
+          <span x-text="`D: ${product.depth}`"></span>
+          <span x-text="`H: ${product.height}`"></span>
+        </div>
+      </div>
+      <div class="flex items-center justify-between mt-2">
+        <span class="text-green-700 text-sm bg-green-100 px-2 py-0.5 rounded flex items-center gap-1">
+          <img src="assets/icons/tick-circle.png" class="w-5 h-5" />
+          <span x-text="product.in_stock_label"></span>
+        </span>
+        <button class="bg-gray-800 text-white text-sm px-3 py-1 rounded flex items-center gap-1"
+          @click="$root.addToCart(product)">
+          <img src="assets/icons/cart-shopping-white.png" class="w-5 h-5" />
+          Add to Cart
+        </button>
+      </div>
+    </div>
+  </template>
+</div>
