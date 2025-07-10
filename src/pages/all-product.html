@@ -1,3 +1,4 @@
+<!-- BENAR: pakai scope x-data dari atas (dari index.html) -->
 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
   <template x-for="product in filteredProducts" :key="product.id">
     <div class="rounded-2xl bg-white shadow p-4 flex flex-col gap-2 relative">
@@ -30,7 +31,7 @@
           <span x-text="product.in_stock_label"></span>
         </span>
         <button class="bg-gray-800 text-white text-sm px-3 py-1 rounded flex items-center gap-1"
-          @click="$root.addToCart(product)">
+          @click="addToCart(product)">
           <img src="assets/icons/cart-shopping-white.png" class="w-5 h-5" />
           Add to Cart
         </button>
