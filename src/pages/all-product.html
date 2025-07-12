@@ -1,5 +1,5 @@
 <!-- BENAR: pakai scope x-data dari atas (dari index.html) -->
-<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 px-2 mt-7">
   <template x-for="product in filteredProducts" :key="product.id">
     <div class="rounded-2xl bg-white shadow p-4 flex flex-col gap-2 relative">
       <div class="absolute top-2 left-2 flex gap-2">
@@ -14,9 +14,9 @@
       <h3 class="font-bold text-center text-base" x-text="product.name"></h3>
       <div class="flex items-center justify-between w-full text-sm">
         <div class="text-lg font-bold text-gray-900">
-          <span x-text="'$' + product.price"></span>
+          <span x-text="formatCurrency(product.price)"></span>
           <template x-if="product.original_price">
-            <span class="line-through text-red-500 ml-1 text-sm" x-text="'$' + product.original_price"></span>
+            <span class="line-through text-red-500 ml-1 text-sm" x-text="formatCurrency(product.original_price)"></span>
           </template>
         </div>
         <div class="flex gap-2 text-gray-600 text-xs">
@@ -37,5 +37,10 @@
         </button>
       </div>
     </div>
+  </template>
+  <template x-if="filteredProducts.length === 0">
+  <div class="col-span-full text-center text-gray-500 py-10">
+    There are no products in this category.
+  </div>
   </template>
 </div>

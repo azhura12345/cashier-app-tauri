@@ -5,12 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>POS App</title>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js"></script>
-  <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50 text-gray-800" x-data="app()" x-init="init()">
 
+  <!-- TOAST -->
+  <div
+    x-show="toast.show"
+    x-transition
+    class="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow z-50"
+    x-text="toast.message"
+  ></div>
+
+  <!-- OVERLAY -->
+  <div
+    x-show="cartOpen"
+    @click="cartOpen = false"
+    x-transition.opacity
+    class="fixed inset-0 bg-black/50 z-30"
+  ></div>
+
   <!-- HEADER -->
-  <header class="flex items-center justify-between px-4 py-1 bg-white border-b shadow-sm">
+  <header class="fixed top-0 left-0 right-0 z-40 bg-white border-b shadow-sm flex justify-between items-center px-4 py-2 h-14">
     <div class="flex items-center space-x-3">
       <button @click="navigate('home')">
         <img src="assets/icons/home.svg" class="w-5 h-5" alt="home icon" />
@@ -24,192 +40,289 @@
           x-model="searchTerm" @input.debounce.300ms="handleSearchInput"/>
       </div>
     </div>
-<button @click="cartOpen = !cartOpen" class="relative">
-  <img src="assets/icons/shopping-cart.svg" class="w-5 h-5" />
-  <span
-    x-show="cart.length > 0"
-    class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1"
-    x-text="cart.length"
-  ></span>
-</button>
-
+    <button @click="cartOpen = !cartOpen" class="relative">
+      <img src="assets/icons/shopping-cart.svg" class="w-5 h-5" />
+      <span
+        x-show="cart.length > 0"
+        class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1"
+        x-text="cart.length"
+      ></span>
+    </button>
   </header>
 
-  <!-- TOAST -->
-<div
-  x-show="toast.show"
-  x-transition
-  class="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow z-50"
-  x-text="toast.message"
-></div>
+  <!-- SIDEBAR -->
+  <aside
+    class="fixed top-14 right-0 w-96 h-[calc(100%-3.5rem)] bg-white shadow-lg z-40 overflow-y-auto transition-transform duration-300 ease-in-out"
+    :class="cartOpen ? 'translate-x-0' : 'translate-x-full'"
+  >
+    <div class="p-6">
+      <div class="flex justify-between items-center">
+        <h2 class="text-xl font-semibold">Order Details</h2>
+        <button class="text-yellow-500 text-sm" @click="cart = []">Clear Cart</button>
+      </div>
+      <div class="mt-4 space-y-4">
+        <template x-for="item in cart" :key="item.id">
+          <div class="flex items-center justify-between border-b pb-2">
+            <div class="flex items-center gap-2 w-1/3">
+              <img :src="item.image" alt="" class="w-10 h-10 object-contain" />
+              <span class="text-sm" x-text="item.name"></span>
+            </div>
+            <div class="flex items-center gap-2 w-1/3">
+              <button class="px-2" @click="item.qty = Math.max(1, item.qty - 1)">-</button>
+              <span x-text="item.qty"></span>
+              <button class="px-2" @click="item.qty++">+</button>
+            </div>
+            <div class="flex items-center gap-2 w-1/3 justify-end">
+              <span class="w-12 text-right text-sm" x-text="'$' + (item.price * item.qty)"></span>
+              <button class="text-red-500" @click="removeFromCart(item.id)">🗑</button>
+            </div>
+          </div>
+        </template>
+      </div>
 
-<div
-  x-show="cartOpen"
-  @click="cartOpen = false"
-  x-transition.opacity
-  class="fixed inset-0 bg-black/50 z-60"
-></div>
-
-<!-- SIDEBAR -->
-<aside
-  x-show="cartOpen"
-  x-transition:enter="transition ease-out duration-300"
-  x-transition:enter-start="translate-x-full"
-  x-transition:enter-end="translate-x-0"
-  x-transition:leave="transition ease-in duration-300"
-  x-transition:leave-start="translate-x-0"
-  x-transition:leave-end="translate-x-full"
-  class="fixed top-0 right-0 w-96 h-full bg-white shadow-lg z-50 overflow-y-auto"
->
-  <div class="p-6">
-    <div class="flex justify-between items-center">
-      <h2 class="text-xl font-semibold">Order Details</h2>
-      <button class="text-yellow-500 text-sm" @click="cart = []">Clear Cart</button>
-    </div>
-    <div class="mt-4 space-y-4">
-      <template x-for="item in cart" :key="item.id">
-        <div class="flex items-center justify-between border-b pb-2">
-          <div class="flex items-center gap-2 w-1/3">
-            <img src="assets/img/office-chair.jpg" class="w-10 h-10 object-contain" />
-            <span class="text-sm" x-text="item.name"></span>
-          </div>
-          <div class="flex items-center gap-2 w-1/3">
-            <button class="px-2" @click="item.qty = Math.max(1, item.qty - 1)">-</button>
-            <span x-text="item.qty"></span>
-            <button class="px-2" @click="item.qty++">+</button>
-          </div>
-          <div class="flex items-center gap-2 w-1/3 justify-end">
-            <span class="w-12 text-right text-sm" x-text="'$' + (item.price * item.qty)"></span>
-            <button class="text-red-500" @click="removeFromCart(item.id)">🗑</button>
-          </div>
+      <!-- SUMMARY -->
+      <div class="mt-6 text-sm">
+        <div class="flex justify-between"><span>Sub Total :</span><span x-text="'$' + totalPrice"></span></div>
+        <div class="flex justify-between"><span>Product Discount :</span><span>$0</span></div>
+        <div class="flex justify-between font-bold text-lg mt-2">
+          <span>Total :</span><span x-text="'$' + totalPrice"></span>
         </div>
-      </template>
-    </div>
-
-    <!-- SUMMARY -->
-    <div class="mt-6 text-sm">
-      <div class="flex justify-between"><span>Sub Total :</span><span x-text="'$' + totalPrice"></span></div>
-      <div class="flex justify-between"><span>Product Discount :</span><span>$0</span></div>
-      <div class="flex justify-between font-bold text-lg mt-2">
-        <span>Total :</span><span x-text="'$' + totalPrice"></span>
       </div>
-    </div>
 
-    <!-- PAYMENT METHOD -->
-    <div class="mt-6">
-      <h3 class="text-sm font-semibold mb-2">Payment Method</h3>
-      <div class="flex gap-4">
-        <button class="flex-1 p-2 border rounded text-sm">Cash</button>
-        <button class="flex-1 p-2 border rounded text-sm">Cart</button>
-        <button class="flex-1 p-2 border rounded text-sm">E-Wallet</button>
-      </div>
-      <button class="mt-6 w-full bg-yellow-600 text-white py-2 rounded text-sm">Order Now</button>
-    </div>
+      <!-- PAYMENT METHOD -->
+<div class="mt-6" x-data>
+  <h3 class="text-sm font-semibold mb-2">Payment Method</h3>
+  <div class="flex gap-4">
+    <button
+      class="flex-1 p-2 border rounded text-sm"
+      :class="paymentMethod === 'cash' ? 'bg-yellow-500 text-white' : ''"
+      @click="paymentMethod = 'cash'"
+    >Cash</button>
+    <button
+      class="flex-1 p-2 border rounded text-sm"
+      :class="paymentMethod === 'card' ? 'bg-yellow-500 text-white' : ''"
+      @click="paymentMethod = 'card'"
+    >Card</button>
+    <button
+      class="flex-1 p-2 border rounded text-sm"
+      :class="paymentMethod === 'ewallet' ? 'bg-yellow-500 text-white' : ''"
+      @click="paymentMethod = 'ewallet'"
+    >E-Wallet</button>
   </div>
-</aside>
+
+  <!-- 💵 CASH -->
+  <div class="mt-4 space-y-2" x-show="paymentMethod === 'cash'">
+    <label class="block text-sm">Amount Paid</label>
+    <input type="number" min="0" x-model="cashAmount" class="w-full border px-3 py-2 rounded text-sm" />
+
+    <template x-if="cashAmount && totalPrice">
+      <p class="text-sm text-green-600">
+        Change: <strong x-text="formatCurrency(cashAmount - totalPrice)"></strong>
+      </p>
+    </template>
+  </div>
+
+  <!-- 💳 CARD -->
+  <div class="mt-4 space-y-2" x-show="paymentMethod === 'card'">
+    <label class="block text-sm">Reference Number (Optional)</label>
+    <input type="text" class="w-full border px-3 py-2 rounded text-sm" placeholder="e.g. 12345678" />
+  </div>
+
+  <!-- 📱 E-WALLET -->
+  <div class="mt-4 space-y-2" x-show="paymentMethod === 'ewallet'">
+    <label class="block text-sm">Select E-Wallet</label>
+    <select class="w-full border px-3 py-2 rounded text-sm">
+      <option value="">-- Choose --</option>
+      <option value="gopay">GoPay</option>
+      <option value="ovo">OVO</option>
+      <option value="dana">DANA</option>
+    </select>
+  </div>
+
+  <!-- ✅ Checkout Button -->
+  <button
+    class="mt-6 w-full bg-yellow-600 text-white py-2 rounded text-sm"
+    :disabled="!paymentMethod"
+    @click="checkout"
+  >Order Now</button>
+</div>
+    </div>
+  </aside>
 
   <!-- MAIN CONTENT -->
-  <main id="page-content" class="px-3 py-1"></main>
+  <div
+    class="transition-all duration-300 ease-in-out pt-10"
+    :class="cartOpen ? 'w-[calc(100%-24rem)] mr-96' : 'w-full mr-0'"
+  >
+    <main id="page-content" class="px-4 py-3"></main>
+  </div>
 
   <!-- JS -->
   <script>
     function app() {
-  return {
-    cart: [],
-    cartOpen: false,
-    toast: { show: false, message: '' },
-    categories: [
-      { id: 1, name: "Living Room", image: "assets/img/living-room.png" },
-      { id: 2, name: "Bedroom", image: "assets/img/bedroom.png" },
-      { id: 3, name: "Dining Room", image: "assets/img/dinning-room.png" },
-      { id: 4, name: "Office", image: "assets/img/office.png" },
-      { id: 5, name: "Kitchen", image: "assets/img/kitchen.png" },
-      { id: 6, name: "Outdoor", image: "assets/img/outdoor.png" },
-      { id: 7, name: "Decoration", image: "assets/img/decoration.png" },
-      { id: 8, name: "Kids", image: "assets/img/kids.png" }
-    ],
-    products: [],
-    searchTerm: '',
-    currentPage: 'home',
-    lastPageBeforeSearch: 'home', // ⬅️ Tambahan ini
+      return {
+        cart: [],
+        cartOpen: false,
+        toast: { show: false, message: '' },
+        categories: [
+          { id: 1, name: "Living Room", image: "assets/img/living-room.png" },
+          { id: 2, name: "Bedroom", image: "assets/img/bedroom.png" },
+          { id: 3, name: "Dining Room", image: "assets/img/dinning-room.png" },
+          { id: 4, name: "Office", image: "assets/img/office.png" },
+          { id: 5, name: "Kitchen", image: "assets/img/kitchen.png" },
+          { id: 6, name: "Outdoor", image: "assets/img/outdoor.png" },
+          { id: 7, name: "Decoration", image: "assets/img/decoration.png" },
+          { id: 8, name: "Kids", image: "assets/img/kids.png" }
+        ],
+        products: [],
+        searchTerm: '',
+        currentPage: 'home',
+        lastPageBeforeSearch: 'home',
+        selectedCategoryId: null,
+        paymentMethod: '',
+        cashAmount: 0,
+        async init() {
+          try {
+            const res = await window.__TAURI__.core.invoke("get_products");
+            this.products = JSON.parse(res);
+            this.navigate('home');
+          } catch (e) {
+            console.error("Gagal ambil produk:", e);
+          }
+        },
+        async navigate(page) {
+  const el = document.getElementById('page-content');
+  if (!el) return;
 
-    async init() {
-      try {
-        const res = await window.__TAURI__.core.invoke("get_products");
-        this.products = JSON.parse(res);
-      } catch (e) {
-        console.error("Gagal ambil produk:", e);
-      }
-      this.navigate('home');
-    },
+  Alpine.destroyTree(el); // bersihin dulu
+  el.innerHTML = '<div class="text-center py-10">Loading...</div>';
 
-    removeFromCart(id) {
-      this.cart = this.cart.filter(item => item.id !== id);
-    },
-    async navigate(page) {
-      const el = document.getElementById('page-content');
-      if (!el) return;
-      el.innerHTML = '<div class="text-center py-10">Loading...</div>';
-      try {
-        const res = await fetch(`pages/${page}.html`);
-        const html = await res.text();
-        el.innerHTML = html;
-        this.currentPage = page; // ⬅️ Update halaman aktif
-        Alpine.initTree(el);
-      } catch (err) {
-        el.innerHTML = '<div class="text-red-500 text-center py-10">Gagal load halaman</div>';
-        console.error("Error loading page:", err);
-      }
-    },
+  try {
+    const res = await fetch(`pages/${page}.html`);
+    const html = await res.text();
+    el.innerHTML = html;
 
-handleSearchInput() {
-  const term = this.searchTerm.trim();
-
-  if (term !== '') {
-    // Kalau bukan di halaman all-product, berarti user search dari luar
-    if (this.currentPage !== 'all-product') {
-      this.lastPageBeforeSearch = this.currentPage;
-      this.navigate('all-product');
-    }
-    // Kalau udah di all-product, biarkan filter jalan otomatis
-  } else {
-    // Kalau kosong dan sebelumnya user datang dari luar all-product
-    if (
-      this.currentPage === 'all-product' &&
-      this.lastPageBeforeSearch &&
-      this.lastPageBeforeSearch !== 'all-product'
-    ) {
-      this.navigate(this.lastPageBeforeSearch);
-      this.lastPageBeforeSearch = null; // reset biar gak nyangkut
-    }
-    // Kalau asalnya dari all-product juga, ya diem aja
+    // ❌ Jangan initTree(el) lagi, karena context Alpine dari <body> udah jalan
+    this.currentPage = page;
+  } catch (err) {
+    el.innerHTML = '<div class="text-red-500 text-center py-10">Gagal load halaman</div>';
+    console.error("Error loading page:", err);
   }
 }
-
 ,
+        handleSearchInput() {
+          const term = this.searchTerm.trim();
+          if (term !== '') {
+            if (this.currentPage !== 'all-product') {
+              this.lastPageBeforeSearch = this.currentPage;
+              this.navigate('all-product');
+            }
+          } else {
+            if (this.currentPage === 'all-product' && this.lastPageBeforeSearch && this.lastPageBeforeSearch !== 'all-product') {
+              this.navigate(this.lastPageBeforeSearch);
+              this.lastPageBeforeSearch = null;
+            }
+          }
+        },
+        addToCart(product) {
+          const existing = this.cart.find(i => i.id === product.id);
+          if (existing) existing.qty++;
+          else this.cart.push({ ...product, qty: 1 });
 
-addToCart(product) {
-  const existing = this.cart.find(i => i.id === product.id);
-  if (existing) existing.qty++;
-  else this.cart.push({ ...product, qty: 1 });
+          this.toast.message = `${product.name} added to cart`;
+          this.toast.show = true;
+          setTimeout(() => this.toast.show = false, 2000);
+        },
+        removeFromCart(id) {
+  this.cart = this.cart.filter(item => item.id !== id);
 
-  this.toast.message = `${product.name} added to cart`;
-  this.toast.show = true;
-  setTimeout(() => this.toast.show = false, 2000);
+  // 🔁 Reset pembayaran jika cart kosong
+  if (this.cart.length === 0) {
+    this.paymentMethod = '';
+    this.cashAmount = 0;
+    this.cartOpen = false;
+  }
+},
+clearCart() {
+  this.cart = [];
+  this.paymentMethod = '';
+  this.cashAmount = 0;
 },
 
-    get filteredProducts() {
-      return this.products.filter(p =>
-        p.name.toLowerCase().includes(this.searchTerm.toLowerCase())
-      );
-    },
+        get filteredProducts() {
+          return this.products.filter(p => {
+            const matchesSearch = p.name.toLowerCase().includes(this.searchTerm.toLowerCase());
+            const matchesCategory = this.selectedCategoryId === null || p.category_id === this.selectedCategoryId;
+            return matchesSearch && matchesCategory;
+          });
+        },
+        setCategory(id) {
+          this.selectedCategoryId = id;
+          if (this.currentPage !== 'all-product') {
+            this.navigate('all-product');
+          }
+        },
+        get totalPrice() {
+          return this.cart.reduce((t, i) => t + i.price * i.qty, 0);
+        },
+        formatCurrency(value) {
+          if (typeof value === 'number') {
+            return `$${value.toFixed(2)}`; // pastikan 2 angka di belakang koma
+          }
+          if (typeof value === 'string') {
+            const parsed = parseFloat(value);
+            return isNaN(parsed) ? value : `$${parsed.toFixed(2)}`;
+          }
+          return value;
+        },
+        resetCategoryAndNavigate() {
+          this.selectedCategoryId = null;
+          this.navigate('all-product');
+        },
+        async checkout() {
+ if (this.cart.length === 0) {
+  this.toast.message = "Cart is empty!";
+  this.toast.show = true;
 
-    get totalPrice() {
-      return this.cart.reduce((t, i) => t + i.price * i.qty, 0);
-    }
-  }
+  setTimeout(() => this.toast.show = false, 2000); // ✅ tambahin ini sebelum return
+  return;
 }
-  </script>
 
+  if (!this.paymentMethod) {
+    this.toast.message = "Please select a payment method!";
+    this.toast.show = true;
+    return;
+  }
+
+  // 💵 Validasi khusus untuk Cash
+  if (this.paymentMethod === 'cash' && Number(this.cashAmount) < this.totalPrice) {
+    this.toast.message = "Amount paid is not enough!";
+    this.toast.show = true;
+    return;
+  }
+
+  try {
+    await window.__TAURI__.core.invoke("save_transaction", {
+      cart: this.cart,
+      payment_method: this.paymentMethod,
+      paid_amount: this.paymentMethod === 'cash' ? this.cashAmount : this.totalPrice
+    });
+
+    this.toast.message = "Transaction Successful!";
+    this.cart = [];
+    this.paymentMethod = '';
+    this.cashAmount = 0;
+    this.toast.show = true;
+  } catch (err) {
+    console.error("Checkout failed:", err);
+    this.toast.message = "Transaction Failed!";
+    this.toast.show = true;
+  }
+
+  setTimeout(() => this.toast.show = false, 2000);
+}
+      }
+    }
+  </script>
 </body>
 </html>
