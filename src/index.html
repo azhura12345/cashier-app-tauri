@@ -6,18 +6,63 @@
   <title>POS App</title>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.0/dist/cdn.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+  @media print {
+    body {
+      background: white !important;
+    }
+
+    .receipt {
+      margin: 0 auto;
+      width: 280px;
+      font-family: monospace;
+      font-size: 11px;
+    }
+
+    .receipt hr {
+      border-style: dashed;
+    }
+  }
+</style>
 </head>
 <body class="bg-gray-50 text-gray-800" x-data="app()" x-init="init()">
+  <div x-show="showTransactionHistory" x-transition.opacity
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+  >
+      <div
+        @click.outside="showTransactionHistory = false"
+        class="bg-white w-full max-w-2xl max-h-[80vh] rounded-lg shadow-lg overflow-hidden flex flex-col"
+      >
+      <div class="flex justify-between items-center px-4 py-2 border-b bg-gray-100">
+        <h2 class="text-lg font-semibold">Today's Transaction History</h2>
+        <button @click="showTransactionHistory = false">
+          <img src="assets/icons/close-circle-black.png" class="w-4 h-4" alt="Close" />
+        </button>
+      </div>
 
-  <!-- TOAST -->
+      <div class="overflow-y-auto p-4 space-y-3 text-sm text-gray-700" x-show="todayTransactions.length > 0">
+        <template x-for="trx in todayTransactions" :key="trx.id">
+          <div class="border rounded p-3 shadow-sm">
+            <div class="flex justify-between font-semibold">
+              <span x-text="trx.transaction_code"></span>
+              <span x-text="formatCurrency(trx.total_amount)"></span>
+            </div>
+            <div class="text-xs text-gray-500" x-text="formatDateTime(trx.created_at)"></div>
+          </div>
+        </template>
+      </div>
+
+      <div class="text-center p-6 text-gray-400" x-show="todayTransactions.length === 0">
+        There are no transactions today.
+      </div>
+    </div>
+  </div>
   <div
     x-show="toast.show"
     x-transition
     class="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow z-50"
     x-text="toast.message"
   ></div>
-
-  <!-- OVERLAY -->
   <div
     x-show="cartOpen"
     @click="cartOpen = false"
@@ -40,14 +85,22 @@
           x-model="searchTerm" @input.debounce.300ms="handleSearchInput"/>
       </div>
     </div>
-    <button @click="cartOpen = !cartOpen" class="relative">
-      <img src="assets/icons/shopping-cart.svg" class="w-5 h-5" />
-      <span
-        x-show="cart.length > 0"
-        class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1"
-        x-text="cart.length"
-      ></span>
-    </button>
+<div class="flex items-center space-x-4">
+  <!-- Tombol Riwayat -->
+  <button @click="showTransactionHistory = true" class="relative">
+    <img src="assets/icons/watch.png" class="w-5 h-5" alt="Transaction History" />
+  </button>
+
+  <!-- Tombol Keranjang -->
+  <button @click="cartOpen = !cartOpen" class="relative">
+    <img src="assets/icons/shopping-cart.svg" class="w-5 h-5" />
+    <span
+      x-show="cart.length > 0"
+      class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1"
+      x-text="cart.length"
+    ></span>
+  </button>
+</div>
   </header>
 
   <!-- SIDEBAR -->
@@ -70,7 +123,14 @@
             <div class="flex items-center gap-2 w-1/3">
               <button class="px-2" @click="item.qty = Math.max(1, item.qty - 1)">-</button>
               <span x-text="item.qty"></span>
-              <button class="px-2" @click="item.qty++">+</button>
+              <button class="px-2" 
+                @click="
+                  item.qty < item.stock 
+                    ? item.qty++ 
+                    : (toast.message = `${item.name} only stock ${item.stock}`, toast.show = true, setTimeout(() => toast.show = false, 2000))
+                "
+              >+</button>
+
             </div>
             <div class="flex items-center gap-2 w-1/3 justify-end">
               <span class="w-12 text-right text-sm" x-text="'$' + (item.price * item.qty)"></span>
@@ -113,13 +173,26 @@
   <!-- 💵 CASH -->
   <div class="mt-4 space-y-2" x-show="paymentMethod === 'cash'">
     <label class="block text-sm">Amount Paid</label>
-    <input type="number" min="0" x-model="cashAmount" class="w-full border px-3 py-2 rounded text-sm" />
+    <input
+      type="number"
+      min="0"
+      step="0.01"
+      x-model.number="cashAmount"
+      placeholder="Enter the amount of money received"
+      class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      @keydown="['e', 'E', '+', '-'].includes($event.key) && $event.preventDefault()"
+    />
+<template x-if="cashAmount && totalPrice && cashAmount >= totalPrice">
+  <p class="text-sm text-green-600">
+    Change: <strong x-text="formatCurrency(cashAmount - totalPrice)"></strong>
+  </p>
+</template>
 
-    <template x-if="cashAmount && totalPrice">
-      <p class="text-sm text-green-600">
-        Change: <strong x-text="formatCurrency(cashAmount - totalPrice)"></strong>
-      </p>
-    </template>
+<template x-if="cashAmount && cashAmount < totalPrice">
+  <p class="text-sm text-red-600">
+    Not enough cash.
+  </p>
+</template>
   </div>
 
   <!-- 💳 CARD -->
@@ -149,17 +222,57 @@
     </div>
   </aside>
 
-  <!-- MAIN CONTENT -->
-  <div
-    class="transition-all duration-300 ease-in-out pt-10"
-    :class="cartOpen ? 'w-[calc(100%-24rem)] mr-96' : 'w-full mr-0'"
-  >
-    <main id="page-content" class="px-4 py-3"></main>
-  </div>
+  <!-- RECEIPT MODAL -->
+<div x-show="showReceipt" x-transition class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center"
+  @click.self="showReceipt = false">
+  <div class="bg-white w-[320px] font-mono text-xs p-4 rounded shadow max-h-[90vh] overflow-y-auto receipt">
+    <h3 class="text-center text-base font-bold mb-1">POS RECEIPT</h3>
+    <p class="text-center mb-3">Jl. Contoh No. 123, Jakarta<br>Telp: 0812-3456-7890</p>
+    <hr class="border-dashed border-gray-400 mb-2" />
 
-  <!-- JS -->
-  <script>
-    function app() {
+    <template x-for="item in receiptItems" :key="item.id">
+      <div class="flex justify-between">
+        <div>
+          <p x-text="item.name"></p>
+          <p class="text-gray-500" x-text="item.qty + ' x $' + item.price.toFixed(2)"></p>
+        </div>
+        <div class="text-right font-semibold" x-text="'$' + (item.price * item.qty).toFixed(2)"></div>
+      </div>
+    </template>
+
+    <hr class="border-dashed border-gray-400 my-2" />
+
+    <div class="flex justify-between">
+      <span>Subtotal</span>
+      <span x-text="'$' + receiptSubtotal.toFixed(2)"></span>
+    </div>
+    <div class="flex justify-between">
+      <span>Paid</span>
+      <span x-text="'$' + receiptPaid.toFixed(2)"></span>
+    </div>
+    <div class="flex justify-between font-bold">
+      <span>Change</span>
+      <span x-text="'$' + receiptChange.toFixed(2)"></span>
+    </div>
+
+    <hr class="border-dashed border-gray-400 my-2" />
+    <p class="text-center text-gray-500 mt-3">Thank you for shopping!</p>
+    <button
+    @click="printReceipt"
+    class="mt-4 block mx-auto bg-blue-600 text-white px-4 py-1.5 rounded text-xs"
+    >
+      Print Receipt
+    </button>
+  </div>
+</div>
+
+<div class="transition-all duration-300 ease-in-out pt-10"
+    :class="cartOpen ? 'w-[calc(100%-24rem)] mr-96' : 'w-full mr-0'">
+    <main id="page-content" class="px-4 py-3"></main>
+</div>
+
+<script>
+  function app() {
       return {
         cart: [],
         cartOpen: false,
@@ -175,41 +288,93 @@
           { id: 8, name: "Kids", image: "assets/img/kids.png" }
         ],
         products: [],
+        receiptItems: [],
         searchTerm: '',
         currentPage: 'home',
         lastPageBeforeSearch: 'home',
         selectedCategoryId: null,
         paymentMethod: '',
         cashAmount: 0,
+        receiptSubtotal: 0,
+        receiptPaid: 0,
+        receiptChange: 0,
+        showReceipt: false,
+        showTransactionHistory: false,
+        todayTransactions: [],
         async init() {
           try {
             const res = await window.__TAURI__.core.invoke("get_products");
             this.products = JSON.parse(res);
             this.navigate('home');
           } catch (e) {
-            console.error("Gagal ambil produk:", e);
+            console.error("Failed to pick up product : ", e);
           }
         },
         async navigate(page) {
-  const el = document.getElementById('page-content');
-  if (!el) return;
+        const el = document.getElementById('page-content');
+        if (!el) return;
 
-  Alpine.destroyTree(el); // bersihin dulu
-  el.innerHTML = '<div class="text-center py-10">Loading...</div>';
+        Alpine.destroyTree(el); // bersihin dulu
+        el.innerHTML = '<div class="text-center py-10">Loading...</div>';
 
-  try {
-    const res = await fetch(`pages/${page}.html`);
-    const html = await res.text();
-    el.innerHTML = html;
+        try {
+          const res = await fetch(`pages/${page}.html`);
+          const html = await res.text();
+          el.innerHTML = html;
 
-    // ❌ Jangan initTree(el) lagi, karena context Alpine dari <body> udah jalan
-    this.currentPage = page;
-  } catch (err) {
-    el.innerHTML = '<div class="text-red-500 text-center py-10">Gagal load halaman</div>';
-    console.error("Error loading page:", err);
-  }
-}
-,
+        this.currentPage = page;
+          } catch (err) {
+            el.innerHTML = '<div class="text-red-500 text-center py-10">Gagal load halaman</div>';
+            console.error("Error loading page:", err);
+          }
+        },
+        isProductNew(product) {
+          if (!product.created_at) return false;
+          const parsedDate = product.created_at.replace(' ', 'T');
+          const createdAt = new Date(parsedDate);
+
+          if (isNaN(createdAt)) {
+            console.warn("❌ Invalid created_at:", product.created_at);
+            return false;
+          }
+
+          const now = new Date();
+          const daysDiff = (now - createdAt) / (1000 * 60 * 60 * 24);
+          return daysDiff <= 7;
+          console.log("📅 Check New?", product.name, product.created_at, daysDiff);
+
+        },
+        printReceipt() {
+          const receiptDiv = document.querySelector('[x-show="showReceipt"] .bg-white');
+          const clone = receiptDiv.cloneNode(true);
+
+          // Hapus tombol Print (biar ga ikut keprint)
+          const btn = clone.querySelector('button');
+          if (btn) btn.remove();
+
+          const win = window.open('', '', 'width=400,height=600');
+          win.document.write(`
+            <html>
+              <head>
+                <title>Print Receipt</title>
+                <style>
+                  body { font-family: monospace; font-size: 12px; padding: 16px; }
+                  hr { border: none; border-top: 1px dashed #999; margin: 10px 0; }
+                  .text-center { text-align: center; }
+                  .font-bold { font-weight: bold; }
+                  .flex { display: flex; justify-content: space-between; }
+                </style>
+              </head>
+              <body>
+                ${clone.innerHTML}
+              </body>
+            </html>
+          `);
+          win.document.close();
+          win.focus();
+          win.print();
+          win.close();
+        },
         handleSearchInput() {
           const term = this.searchTerm.trim();
           if (term !== '') {
@@ -226,29 +391,45 @@
         },
         addToCart(product) {
           const existing = this.cart.find(i => i.id === product.id);
-          if (existing) existing.qty++;
-          else this.cart.push({ ...product, qty: 1 });
+          if (product.stock <= 0) {
+            this.toast.message = `${product.name} out of stock!`;
+          } else if (existing && existing.qty >= product.stock) {
+            this.toast.message = `${product.name} exceeds stock (${product.stock})`;
+          } else if (existing) {
+            existing.price = parseFloat(product.discount_price ?? product.price ?? 0); // refresh just in case
+            this.toast.message = `${product.name} added to cart`;
+          } else {
+            this.cart.push({
+              ...product,
+              qty: 1,
+              price: parseFloat(product.discount_price ?? product.price ?? 0)
+            });
+            this.toast.message = `${product.name} added to cart`;
+          }
 
-          this.toast.message = `${product.name} added to cart`;
           this.toast.show = true;
           setTimeout(() => this.toast.show = false, 2000);
         },
+        getDiscountPercent(product) {
+          if (!product.price || !product.discount_price) return null;
+          const price = parseFloat(product.price);
+          const disc = parseFloat(product.discount_price);
+          if (disc >= price) return null;
+          return Math.round(((price - disc) / price) * 100);
+        },
         removeFromCart(id) {
-  this.cart = this.cart.filter(item => item.id !== id);
-
-  // 🔁 Reset pembayaran jika cart kosong
-  if (this.cart.length === 0) {
-    this.paymentMethod = '';
-    this.cashAmount = 0;
-    this.cartOpen = false;
-  }
-},
-clearCart() {
-  this.cart = [];
-  this.paymentMethod = '';
-  this.cashAmount = 0;
-},
-
+          this.cart = this.cart.filter(item => item.id !== id);
+          if (this.cart.length === 0) {
+            this.paymentMethod = '';
+            this.cashAmount = 0;
+            this.cartOpen = false;
+          }
+        },
+        clearCart() {
+          this.cart = [];
+          this.paymentMethod = '';
+          this.cashAmount = 0;
+        },
         get filteredProducts() {
           return this.products.filter(p => {
             const matchesSearch = p.name.toLowerCase().includes(this.searchTerm.toLowerCase());
@@ -267,7 +448,7 @@ clearCart() {
         },
         formatCurrency(value) {
           if (typeof value === 'number') {
-            return `$${value.toFixed(2)}`; // pastikan 2 angka di belakang koma
+            return `$${value.toFixed(2)}`;
           }
           if (typeof value === 'string') {
             const parsed = parseFloat(value);
@@ -280,49 +461,79 @@ clearCart() {
           this.navigate('all-product');
         },
         async checkout() {
- if (this.cart.length === 0) {
-  this.toast.message = "Cart is empty!";
-  this.toast.show = true;
+        if (this.cart.length === 0) {
+          this.toast.message = "Cart is empty!";
+          this.toast.show = true;
+          setTimeout(() => this.toast.show = false, 2000);
+          return;
+        }
+        if (!this.paymentMethod) {
+          this.toast.message = "Please select a payment method!";
+          this.toast.show = true;
+          return;
+        }
+        if (this.paymentMethod === 'cash' && (isNaN(this.cashAmount) || this.cashAmount < this.totalPrice)) {
+          this.toast.message = "Amount paid is not enough!";
+          this.toast.show = true;
+          return;
+        }
+        try {
+          const res = await window.__TAURI__.core.invoke("get_products");
+          const latestProducts = JSON.parse(res);
 
-  setTimeout(() => this.toast.show = false, 2000); // ✅ tambahin ini sebelum return
-  return;
-}
+          for (const cartItem of this.cart) {
+            const latest = latestProducts.find(p => p.id === cartItem.id);
+            if (!latest || cartItem.qty > latest.stock) {
+              this.toast.message = `${cartItem.name}: only ${latest?.stock ?? 0} in stock`;
+              this.toast.show = true;
+              setTimeout(() => this.toast.show = false, 2000);
+              return;
+            }
+          }
 
-  if (!this.paymentMethod) {
-    this.toast.message = "Please select a payment method!";
-    this.toast.show = true;
-    return;
-  }
+          await window.__TAURI__.core.invoke("save_transaction", {
+            payload: {
+              cart: this.cart,
+              payment_method: this.paymentMethod,
+              paid_amount: this.paymentMethod === 'cash' ? this.cashAmount : this.totalPrice
+            }
+          });
 
-  // 💵 Validasi khusus untuk Cash
-  if (this.paymentMethod === 'cash' && Number(this.cashAmount) < this.totalPrice) {
-    this.toast.message = "Amount paid is not enough!";
-    this.toast.show = true;
-    return;
-  }
+          this.toast.message = "Transaction Successful!";
+          this.toast.show = true;
 
-  try {
-    await window.__TAURI__.core.invoke("save_transaction", {
-      cart: this.cart,
-      payment_method: this.paymentMethod,
-      paid_amount: this.paymentMethod === 'cash' ? this.cashAmount : this.totalPrice
-    });
+          this.receiptItems = JSON.parse(JSON.stringify(this.cart));
+          this.receiptSubtotal = this.totalPrice;
+          this.receiptPaid = this.paymentMethod === 'cash' ? Number(this.cashAmount) : this.totalPrice;
+          this.receiptChange = this.receiptPaid - this.receiptSubtotal;
 
-    this.toast.message = "Transaction Successful!";
-    this.cart = [];
-    this.paymentMethod = '';
-    this.cashAmount = 0;
-    this.toast.show = true;
-  } catch (err) {
-    console.error("Checkout failed:", err);
-    this.toast.message = "Transaction Failed!";
-    this.toast.show = true;
-  }
+          this.cart = [];
+          this.paymentMethod = '';
+          this.cashAmount = 0;
 
-  setTimeout(() => this.toast.show = false, 2000);
-}
+          const refreshRes = await window.__TAURI__.core.invoke("get_products");
+          this.products = JSON.parse(refreshRes);
+
+          this.showReceipt = true;
+
+        } catch (err) {
+          console.error("Checkout failed:", err);
+          this.toast.message = "Transaction Failed!";
+          this.toast.show = true;
+        }
+
+        setTimeout(() => this.toast.show = false, 2000);
+      },
+      fetchTodayTransactions: async function () {
+        try {
+          const response = await window.__TAURI__.core.invoke("get_today_transactions");
+          this.todayTransactions = response;
+        } catch (err) {
+          console.error("Gagal fetch transaksi hari ini:", err);
+        }
       }
     }
-  </script>
+  }
+</script>
 </body>
 </html>
